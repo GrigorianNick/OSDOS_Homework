@@ -85,6 +85,17 @@ void printDiagnosticInfo() {
 	}
 }
 
+
+
+void endian_swap(uint8_t* in, int size) { // Convert between endians inplace
+	uint8_t temp;
+	for (int i = 0; i < size/2; i++) {
+		temp = in[i];
+		in[i] = in[size - i - 1];
+		in[size - i - 1] = temp;
+	}
+}
+
 void loadFATInfo() {
 	// Loading info
 	disk.seekg(11, disk.beg);
@@ -125,15 +136,6 @@ void loadFATInfo() {
 	}
 }
 
-void endian_swap(uint8_t* in, int size) { // Convert between endians inplace
-	uint8_t temp;
-	for (int i = 0; i < size/2; i++) {
-		temp = in[i];
-		in[i] = in[size - i - 1];
-		in[size - i - 1] = temp;
-	}
-}
-
 int main( int argc, char *argv[] ) {
 	if (argc != 2) {
 		cout << "Error: improper number of arguments." << endl;
@@ -142,7 +144,21 @@ int main( int argc, char *argv[] ) {
 	disk.open(argv[1]);
 	loadFATInfo();
 	printDiagnosticInfo();
-	disk.seekg(FSInfo * BytesPerSec, disk.beg); // FSInfo sector
+	//disk.seekg(FSInfo * BytesPerSec, disk.beg); // FSInfo sector
+	//disk.seekg((FSInfo * BytesPerSec) + 484, disk.beg); // FSInfo secondary sig
+	uint8_t temp[11];
+	/*cout << sizeof(FATSz16) << endl << hex << (int)FATSz16 << endl;
+	endian_swap((uint8_t*)&FATSz16, sizeof(FATSz16));
+	cout << hex << (int)FATSz16 << endl;*/
+	//disk.seekg((FATSz16 * NumFATs) + 1, disk.beg);
+	disk.seekg((RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec, disk.beg); // root directory
+	cout << (RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec << endl;
+	//cout << (FATSz16 * NumFATs) + 1 << endl;
+	//disk.seekg(BytesPerSec * SecPerClus * (RootClus), disk.beg); // Should be root directory
+	//disk.seekg((RsvdSecCnt + (NumFATs * FATSz16)), disk.beg);
+	//disk.seekg(32, disk.beg);
+	disk.read((char*)temp, 11);
+	cout << temp << endl;
 	/*string input;
 	cout << ":";
 	cin >> input;
