@@ -1,3 +1,4 @@
+#include <iomanip>
 #include <iostream>
 #include <fstream>
 #include <stdint.h> // needed for uint8_t
@@ -5,6 +6,8 @@
 
 using namespace std;
 
+// The FAT system
+fstream disk;
 // FAT system info
 uint16_t BytesPerSec;
 uint8_t SecPerClus;
@@ -82,24 +85,8 @@ void printDiagnosticInfo() {
 	}
 }
 
-
-
-void endian_swap(uint8_t* in, int size) { // Convert between endians inplace
-	uint8_t temp;
-	for (int i = 0; i < size/2; i++) {
-		temp = in[i];
-		in[i] = in[size - i - 1];
-		in[size - i - 1] = temp;
-	}
-}
-
-int main( int argc, char *argv[] ) {
-	if (argc != 2) {
-		cout << "Error: improper number of arguments." << endl;
-		return 1;
-	}
-	fstream disk;
-	disk.open(argv[1]);
+void loadFATInfo() {
+	// Loading info
 	disk.seekg(11, disk.beg);
 	disk.read((char*)&BytesPerSec, 2);
 	disk.read((char*)&SecPerClus, 1);
@@ -114,7 +101,6 @@ int main( int argc, char *argv[] ) {
 	disk.read((char*)&HiddSec, 4);
 	disk.read((char*)&TotSec32, 4);
 	if ((int)FATSz16 == 0) {
-		cout << "We're FAT32!" << endl;
 		Fat32 = true;
 		disk.read((char*)&FATSz32, 4);
 		disk.read((char*)&ExtFlags, 2);
@@ -137,10 +123,28 @@ int main( int argc, char *argv[] ) {
 		disk.read((char*)VoILab, 11);
 		disk.read((char*)FilSysType, 8);
 	}
-	disk.close();
+}
+
+void endian_swap(uint8_t* in, int size) { // Convert between endians inplace
+	uint8_t temp;
+	for (int i = 0; i < size/2; i++) {
+		temp = in[i];
+		in[i] = in[size - i - 1];
+		in[size - i - 1] = temp;
+	}
+}
+
+int main( int argc, char *argv[] ) {
+	if (argc != 2) {
+		cout << "Error: improper number of arguments." << endl;
+		return 1;
+	}
+	disk.open(argv[1]);
+	loadFATInfo();
 	printDiagnosticInfo();
-	string input;
-	/*cout << ":";
+	disk.seekg(FSInfo * BytesPerSec, disk.beg); // FSInfo sector
+	/*string input;
+	cout << ":";
 	cin >> input;
 	while (input != "exit") {
 		cout << ":";
@@ -151,4 +155,7 @@ int main( int argc, char *argv[] ) {
 	cout << sizeof(i) << endl;
 	print_bits(i);
 	endian_swap((uint8_t*)&i, sizeof(i));
-	print_bits(i);*/ return 0; }
+	print_bits(i);*/
+	disk.close();
+	return 0;
+}
