@@ -152,7 +152,7 @@ int main( int argc, char *argv[] ) {
 	disk.seekg(cwd, disk.beg); // moving to root
 	string input;
 	cout << ": > ";
-	cin >> input;
+	getline(cin, input);
 	uint8_t file_name[8];
 	uint8_t file_ext[3];
 	uint8_t DIR_Attr;
@@ -190,9 +190,30 @@ int main( int argc, char *argv[] ) {
 				disk.read((char*)&DIR_Attr, 1);
 			} while ((int)file_name[0] != 0);
 		}
+		else if (input.substr(0,2) == "cd") {
+			string target = input.substr(3);
+			/*disk.read((char*)file_name, 8);
+			disk.read((char*)file_ext, 3);
+			disk.read((char*)&DIR_Attr, 1);*/
+			do {
+				//if (file_name == target) {
+					disk.seekg(90, disk.cur);
+					uint16_t jump_target;
+					disk.read((char*)&jump_target, 2);
+					cout << cwd << endl << jump_target << endl;
+					cwd = (jump_target + 2) * SecPerClus * BytesPerSec + cwd;
+					cout << cwd << endl;
+					break;
+				//}
+				/*else {
+					cout << "didn't find the target" << endl;
+				}*/
+				disk.seekg(20, disk.cur);
+			} while((int)file_name[0] != 0);
+		}
 		disk.seekg(cwd, disk.beg);
 		cout << ": > ";
-		cin >> input;
+		getline(cin, input);
 	}
 
 	/*uint64_t i = 2168595480;
