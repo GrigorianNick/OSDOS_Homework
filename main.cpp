@@ -3,6 +3,7 @@
 #include <fstream>
 #include <stdint.h> // needed for uint8_t
 #include <bitset>
+#include <string>
 
 using namespace std;
 
@@ -146,26 +147,40 @@ int main( int argc, char *argv[] ) {
 	printDiagnosticInfo();
 	//disk.seekg(FSInfo * BytesPerSec, disk.beg); // FSInfo sector
 	//disk.seekg((FSInfo * BytesPerSec) + 484, disk.beg); // FSInfo secondary sig
-	uint8_t temp[11];
-	/*cout << sizeof(FATSz16) << endl << hex << (int)FATSz16 << endl;
-	endian_swap((uint8_t*)&FATSz16, sizeof(FATSz16));
-	cout << hex << (int)FATSz16 << endl;*/
-	//disk.seekg((FATSz16 * NumFATs) + 1, disk.beg);
+	uint8_t temp[8];
 	disk.seekg((RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec, disk.beg); // root directory
 	cout << (RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec << endl;
-	//cout << (FATSz16 * NumFATs) + 1 << endl;
-	//disk.seekg(BytesPerSec * SecPerClus * (RootClus), disk.beg); // Should be root directory
-	//disk.seekg((RsvdSecCnt + (NumFATs * FATSz16)), disk.beg);
-	//disk.seekg(32, disk.beg);
-	disk.read((char*)temp, 11);
+	disk.read((char*)temp, 8);
 	cout << temp << endl;
-	/*string input;
-	cout << ":";
+	disk.seekg((RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec, disk.beg); // root directory
+	string input;
+	cout << ": > ";
 	cin >> input;
+	uint8_t file_name[8];
+	uint8_t file_ext[3];
 	while (input != "exit") {
-		cout << ":";
+		if (input == "ls") {
+			disk.read((char*)file_name, 8);
+			disk.read((char*)file_ext, 3);
+			do { 
+				for (int i = 0; i < 8; i++) {
+					if ((int)file_name[i] != 32) {
+						cout << file_name[i];
+					}
+					else {
+						break;
+					}
+				}
+				cout << "." << file_ext << endl;
+				disk.seekg(53, disk.cur);
+				disk.read((char*)file_name, 8);
+				disk.read((char*)file_ext, 3);
+			} while ((int)file_name[0] != 0);
+			disk.seekg((RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec, disk.beg);
+		}
+		cout << ": > ";
 		cin >> input;
-	}*/
+	}
 
 	/*uint64_t i = 2168595480;
 	cout << sizeof(i) << endl;
