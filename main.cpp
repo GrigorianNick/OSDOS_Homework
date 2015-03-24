@@ -148,7 +148,9 @@ int main( int argc, char *argv[] ) {
 	//disk.seekg(FSInfo * BytesPerSec, disk.beg); // FSInfo sector
 	//disk.seekg((FSInfo * BytesPerSec) + 484, disk.beg); // FSInfo secondary sig
 	int cwd; // absolute position of Current Working Directory
-	cwd = (RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec; // root directory
+	int root; // absolute position of root
+	root = (RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec; // root directory
+	cwd = root;
 	disk.seekg(cwd, disk.beg); // moving to root
 	string input;
 	cout << ": > ";
@@ -197,11 +199,11 @@ int main( int argc, char *argv[] ) {
 			disk.read((char*)&DIR_Attr, 1);*/
 			do {
 				//if (file_name == target) {
-					disk.seekg(90, disk.cur);
+					disk.seekg(154, disk.cur);
 					uint16_t jump_target;
 					disk.read((char*)&jump_target, 2);
 					cout << cwd << endl << jump_target << endl;
-					cwd = (jump_target + 2) * SecPerClus * BytesPerSec + cwd;
+					cwd = (jump_target + 2) * SecPerClus * BytesPerSec + root;
 					cout << cwd << endl;
 					break;
 				//}
