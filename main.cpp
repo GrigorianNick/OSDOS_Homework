@@ -160,7 +160,15 @@ int main( int argc, char *argv[] ) {
 		if (input == "ls") {
 			disk.read((char*)file_name, 8);
 			disk.read((char*)file_ext, 3);
-			do { 
+			disk.read((char*)&DIR_Attr, 1);
+			do {
+				if (((int)DIR_Attr & 2) == 2) { // Hidden folder, skip
+					disk.seekg(20, disk.cur);
+					disk.read((char*)file_name, 8);
+					disk.read((char*)file_ext, 3);
+					disk.read((char*)&DIR_Attr, 1);
+					continue;
+				}
 				for (int i = 0; i < 8; i++) {
 					if ((int)file_name[i] != 32) {
 						cout << file_name[i];
@@ -169,7 +177,6 @@ int main( int argc, char *argv[] ) {
 						break;
 					}
 				}
-				disk.read((char*)&DIR_Attr, 1);
 				if (((int)DIR_Attr & 16) != 16 && (int)file_ext[0] != 32) { // This entry isn't a directory and it has an ext
 					cout << "." << file_ext;
 				}
@@ -177,9 +184,10 @@ int main( int argc, char *argv[] ) {
 					cout << file_ext;
 				}
 				cout << endl; // Carriage return!
-				disk.seekg(52, disk.cur);
+				disk.seekg(20, disk.cur);
 				disk.read((char*)file_name, 8);
 				disk.read((char*)file_ext, 3);
+				disk.read((char*)&DIR_Attr, 1);
 			} while ((int)file_name[0] != 0);
 		}
 		disk.seekg(cwd, disk.beg);
