@@ -147,17 +147,15 @@ int main( int argc, char *argv[] ) {
 	printDiagnosticInfo();
 	//disk.seekg(FSInfo * BytesPerSec, disk.beg); // FSInfo sector
 	//disk.seekg((FSInfo * BytesPerSec) + 484, disk.beg); // FSInfo secondary sig
-	uint8_t temp[8];
-	disk.seekg((RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec, disk.beg); // root directory
-	cout << (RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec << endl;
-	disk.read((char*)temp, 8);
-	cout << temp << endl;
-	disk.seekg((RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec, disk.beg); // root directory
+	int cwd; // absolute position of Current Working Directory
+	cwd = (RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec; // root directory
+	disk.seekg(cwd, disk.beg); // moving to root
 	string input;
 	cout << ": > ";
 	cin >> input;
 	uint8_t file_name[8];
 	uint8_t file_ext[3];
+	uint8_t DIR_Attr;
 	while (input != "exit") {
 		if (input == "ls") {
 			disk.read((char*)file_name, 8);
@@ -171,13 +169,20 @@ int main( int argc, char *argv[] ) {
 						break;
 					}
 				}
-				cout << "." << file_ext << endl;
-				disk.seekg(53, disk.cur);
+				disk.read((char*)&DIR_Attr, 1);
+				if (((int)DIR_Attr & 16) != 16 && (int)file_ext[0] != 32) { // This entry isn't a directory and it has an ext
+					cout << "." << file_ext;
+				}
+				else if (((int)DIR_Attr & 16) == 16 && (int)file_ext[0] != 32) { // We're a directory that took all 11 bytes
+					cout << file_ext;
+				}
+				cout << endl; // Carriage return!
+				disk.seekg(52, disk.cur);
 				disk.read((char*)file_name, 8);
 				disk.read((char*)file_ext, 3);
 			} while ((int)file_name[0] != 0);
-			disk.seekg((RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec, disk.beg);
 		}
+		disk.seekg(cwd, disk.beg);
 		cout << ": > ";
 		cin >> input;
 	}
