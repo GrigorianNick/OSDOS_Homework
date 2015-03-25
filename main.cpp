@@ -171,6 +171,13 @@ int main( int argc, char *argv[] ) {
 					disk.read((char*)&DIR_Attr, 1);
 					continue;
 				}
+				if (((int)DIR_Attr & 16) == 16) { // Directory, D w/ 2 spaces
+					cout << "D  ";
+				}
+				else if (((int)DIR_Attr & 8) == 8) {} // Volume ID, no preceding lines
+				else { // File, 3 spaces
+					cout << "   ";
+				}
 				for (int i = 0; i < 8; i++) {
 					if ((int)file_name[i] != 32) {
 						cout << file_name[i];
