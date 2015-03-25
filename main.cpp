@@ -174,7 +174,9 @@ int main( int argc, char *argv[] ) {
 				if (((int)DIR_Attr & 16) == 16) { // Directory, D w/ 2 spaces
 					cout << "D  ";
 				}
-				else if (((int)DIR_Attr & 8) == 8) {} // Volume ID, no preceding lines
+				else if (((int)DIR_Attr & 8) == 8) { // Volume ID, Volume Label: w/ 1 space
+					cout << "Volume Label: ";
+				}
 				else { // File, 3 spaces
 					cout << "   ";
 				}
@@ -199,25 +201,39 @@ int main( int argc, char *argv[] ) {
 				disk.read((char*)&DIR_Attr, 1);
 			} while ((int)file_name[0] != 0);
 		}
+		else if (input == "cd") {
+			cout << root << endl;
+			cwd = root;
+		}
 		else if (input.substr(0,2) == "cd") {
 			string target = input.substr(3);
+			bool target_found;
 			/*disk.read((char*)file_name, 8);
 			disk.read((char*)file_ext, 3);
 			disk.read((char*)&DIR_Attr, 1);*/
 			do {
-				//if (file_name == target) {
-					disk.seekg(154, disk.cur);
+				disk.read((char*)file_name, 8);
+				disk.read((char*)file_ext, 3);
+				disk.read((char*)&DIR_Attr, 1);
+				target_found = true;
+				for (int i = 0; i < target.length(); i++) {
+					if ((int)target[i] != (int)file_name[i]) {
+						target_found = false;
+					}
+				}
+				if (target_found) {
+					disk.seekg(14, disk.cur);
 					uint16_t jump_target;
 					disk.read((char*)&jump_target, 2);
 					cout << cwd << endl << jump_target << endl;
 					cwd = (jump_target + 2) * SecPerClus * BytesPerSec + root;
 					cout << cwd << endl;
 					break;
-				//}
-				/*else {
+				}
+				else {
+					disk.seekg(20, disk.cur);
 					cout << "didn't find the target" << endl;
-				}*/
-				disk.seekg(20, disk.cur);
+				}
 			} while((int)file_name[0] != 0);
 		}
 		disk.seekg(cwd, disk.beg);
