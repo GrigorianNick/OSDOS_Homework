@@ -68,9 +68,6 @@ void cd(string target) {
 	uint8_t file_ext[3];
 	uint8_t DIR_Attr;
 	bool target_found;
-	/*disk.read((char*)file_name, 8);
-	disk.read((char*)file_ext, 3);
-	disk.read((char*)&DIR_Attr, 1);*/
 	do {
 		disk.read((char*)file_name, 8);
 		disk.read((char*)file_ext, 3);
@@ -111,15 +108,12 @@ void cd(string target) {
 				cwd = root;
 			}
 			else {
-				cout << cwd << endl << jump_target << endl;
 				cwd = (jump_target + 2) * SecPerClus * BytesPerSec + root;
-				cout << cwd << endl;
 				break;
 			}
 		}
 		else {
 			disk.seekg(20, disk.cur);
-			cout << "didn't find the target" << endl;
 		}
 	} while((int)file_name[0] != 0);
 }

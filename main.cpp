@@ -34,37 +34,31 @@ int main( int argc, char *argv[] ) {
 			ls();
 		}
 		else if (input.substr(0,2) == "ls") { // ls w/ a target
+			int cwd_bak = cwd;
+			string cwd_string_bak = cwd_string;
 			string target = input.substr(3);
-			bool target_found;
-			do {
-				disk.read((char*)file_name, 8);
-				disk.read((char*)file_ext, 3);
-				disk.read((char*)&DIR_Attr, 1);
-				target_found = true;
-				for (int i = 0; i < target.length(); i++) {
-					if ((int)target[i] != (int)file_name[i]) {
-						target_found = false;
-					}
-				}
-				if (target_found) {
-					disk.seekg(14, disk.cur);
-					uint16_t jump_target;
-					disk.read((char*)&jump_target, 2);
-					if ((int)jump_target == 0) { // ls'ing root
-						disk.seekg(root, disk.beg);
-					}
-					else {
-						disk.seekg((jump_target + 2) * SecPerClus * BytesPerSec + root, disk.beg);
-					}
-					ls();
-					break;
+			if (target[0] == '/') { // Absoute path, start at root
+				cwd_string = "/";
+				cwd = root;
+				disk.seekg(cwd, disk.beg);
+			}
+			string sub_target = "";
+			for (int i = 0; i < target.length(); i++) {
+				if (target[i] != '/') { // Good to keep building sub_target
+					sub_target += target[i];
 				}
 				else {
-					disk.seekg(20, disk.cur);
-					cout << "not it!" << endl;
+					if (sub_target == "") continue;
+					cd (sub_target);
+					disk.seekg(cwd, disk.beg);
+					sub_target = "";
 				}
 			}
-			while ((int)file_name[0] != 0);
+			if (cwd != root) cd(sub_target);
+			disk.seekg(cwd, disk.beg);
+			ls();
+			cwd = cwd_bak;
+			cwd_string = cwd_string_bak;
 		}
 		else if (input == "cd") { // Take us back to root, since we don't have home directories
 			cwd_string = "/";
@@ -81,7 +75,6 @@ int main( int argc, char *argv[] ) {
 			for (int i = 0; i < target.length(); i++) {
 				if (target[i] != '/') { // Good to keep building sub_target
 					sub_target += target[i];
-					cout << sub_target << endl;
 				}
 				else {
 					if (sub_target == "") continue;
@@ -90,7 +83,7 @@ int main( int argc, char *argv[] ) {
 					sub_target = "";
 				}
 			}
-			cd(sub_target);
+			if (sub_target != "") cd(sub_target);
 		}
 		disk.seekg(cwd, disk.beg);
 		cout << ": " << cwd_string << " > ";
