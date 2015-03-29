@@ -2,6 +2,7 @@
 
 using namespace std;
 
+string cwd_string; // string keeping track of where we are
 int cwd; // absolute position of Current Working Directory
 int root; // absolute position of root
 

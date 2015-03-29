@@ -20,10 +20,11 @@ int main( int argc, char *argv[] ) {
 	//disk.seekg(FSInfo * BytesPerSec, disk.beg); // FSInfo sector
 	//disk.seekg((FSInfo * BytesPerSec) + 484, disk.beg); // FSInfo secondary sig
 	root = (RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec; // root directory
+	cwd_string = "/";
 	cwd = root;
 	disk.seekg(cwd, disk.beg); // moving to root
 	string input;
-	cout << ": > ";
+	cout << ": " << cwd_string << " > ";
 	getline(cin, input);
 	uint8_t file_name[8];
 	uint8_t file_ext[3];
@@ -66,14 +67,33 @@ int main( int argc, char *argv[] ) {
 			while ((int)file_name[0] != 0);
 		}
 		else if (input == "cd") { // Take us back to root, since we don't have home directories
+			cwd_string = "/";
 			cwd = root;
 		}
-		else if (input.substr(0,2) == "cd") {
+		else if (input.substr(0,2) == "cd") { // Need to break the target down into bite sized chunks for cd
 			string target = input.substr(3);
-			cd(target);
+			if (target[0] == '/') { // Absoute path, start at root
+				cwd_string = "/";
+				cwd = root;
+				disk.seekg(cwd, disk.beg);
+			}
+			string sub_target = "";
+			for (int i = 0; i < target.length(); i++) {
+				if (target[i] != '/') { // Good to keep building sub_target
+					sub_target += target[i];
+					cout << sub_target << endl;
+				}
+				else {
+					if (sub_target == "") continue;
+					cd (sub_target);
+					disk.seekg(cwd, disk.beg);
+					sub_target = "";
+				}
+			}
+			cd(sub_target);
 		}
 		disk.seekg(cwd, disk.beg);
-		cout << ": > ";
+		cout << ": " << cwd_string << " > ";
 		getline(cin, input);
 	}
 	disk.close();

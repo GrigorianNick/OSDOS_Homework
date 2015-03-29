@@ -42,7 +42,15 @@ void ls() {
 			}
 		}
 		if (((int)DIR_Attr & 16) != 16 && (int)file_ext[0] != 32) { // This entry isn't a directory and it has an ext
-			cout << "." << file_ext;
+			if ((int)file_ext[0] != 32) cout << ".";
+			for (int i = 0; i < 3; i++) {
+				if ((int)file_ext[i] != 32) {
+					cout << file_ext[i];
+				}
+				else {
+					break;
+				}
+			}
 		}
 		else if (((int)DIR_Attr & 16) == 16 && (int)file_ext[0] != 32) { // We're a directory that took all 11 bytes
 			cout << file_ext;
@@ -74,6 +82,28 @@ void cd(string target) {
 			}
 		}
 		if (target_found) {
+			if (target != "." && target != "..") { // We're delving deeper into the dir tree
+				if (cwd_string != "/") { // need to start the slashes after root
+					cwd_string += "/";
+				}
+				for (int i = 0; i < 8; i++) {
+					if ((int)file_name[i] == 32) break; // reached end of file name
+					cwd_string += file_name[i]; // append to cwd_string
+				}
+				for (int i = 0; i < 3; i++) {
+					if ((int)file_ext[i] == 32) break; // reached end of file ext
+					cwd_string += file_name[i]; // append to cwd_string
+				}
+			}
+			else if (target == "..") { // Delete last folder
+				size_t last_pos = cwd_string.find_last_of('/');
+				if (last_pos != 0) { // We aren't cding back to root
+					cwd_string = cwd_string.substr(0, last_pos);
+				}
+				else {
+					cwd_string = "/";
+				}
+			}
 			disk.seekg(14, disk.cur);
 			uint16_t jump_target;
 			disk.read((char*)&jump_target, 2);
