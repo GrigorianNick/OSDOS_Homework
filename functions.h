@@ -9,6 +9,7 @@
 
 using namespace std;
 
+
 void ls() {
 	uint8_t file_name[8];
 	uint8_t file_ext[3];
@@ -116,4 +117,25 @@ void cd(string target) {
 			disk.seekg(20, disk.cur);
 		}
 	} while((int)file_name[0] != 0);
+}
+
+void seek(string target) {
+	if (target[0] == '/') {
+		cwd_string = "/";
+		cwd = root;
+		disk.seekg(cwd, disk.beg);
+	}
+	string sub_target = "";
+	for (int i = 0; i < target.length(); i++) {
+		if (target[i] != '/') {
+			sub_target += target[i];
+		}
+		else {
+			if (sub_target == "") continue;
+			cd (sub_target);
+			disk.seekg(cwd, disk.beg);
+			sub_target = "";
+		}
+	}
+	if (sub_target != "") cd(sub_target);
 }

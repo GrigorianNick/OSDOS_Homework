@@ -36,25 +36,7 @@ int main( int argc, char *argv[] ) {
 		else if (input.substr(0,2) == "ls") { // ls w/ a target
 			int cwd_bak = cwd;
 			string cwd_string_bak = cwd_string;
-			string target = input.substr(3);
-			if (target[0] == '/') { // Absoute path, start at root
-				cwd_string = "/";
-				cwd = root;
-				disk.seekg(cwd, disk.beg);
-			}
-			string sub_target = "";
-			for (int i = 0; i < target.length(); i++) {
-				if (target[i] != '/') { // Good to keep building sub_target
-					sub_target += target[i];
-				}
-				else {
-					if (sub_target == "") continue;
-					cd (sub_target);
-					disk.seekg(cwd, disk.beg);
-					sub_target = "";
-				}
-			}
-			if (cwd != root) cd(sub_target);
+			seek(input.substr(3));
 			disk.seekg(cwd, disk.beg);
 			ls();
 			cwd = cwd_bak;
@@ -65,25 +47,7 @@ int main( int argc, char *argv[] ) {
 			cwd = root;
 		}
 		else if (input.substr(0,2) == "cd") { // Need to break the target down into bite sized chunks for cd
-			string target = input.substr(3);
-			if (target[0] == '/') { // Absoute path, start at root
-				cwd_string = "/";
-				cwd = root;
-				disk.seekg(cwd, disk.beg);
-			}
-			string sub_target = "";
-			for (int i = 0; i < target.length(); i++) {
-				if (target[i] != '/') { // Good to keep building sub_target
-					sub_target += target[i];
-				}
-				else {
-					if (sub_target == "") continue;
-					cd (sub_target);
-					disk.seekg(cwd, disk.beg);
-					sub_target = "";
-				}
-			}
-			if (sub_target != "") cd(sub_target);
+			seek(input.substr(3));
 		}
 		disk.seekg(cwd, disk.beg);
 		cout << ": " << cwd_string << " > ";
