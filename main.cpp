@@ -49,8 +49,25 @@ int main( int argc, char *argv[] ) {
 		else if (input.substr(0,2) == "cd") { // Need to break the target down into bite sized chunks for cd
 			seek(input.substr(3));
 		}
-		else if (input == "test") {
-			cpout("/PEOPLE/YYZ5W/THE-GAME.TXT", "");
+		else if (input.substr(0,5) == "cpout") {
+			int cwd_bak = cwd;
+			string cwd_string_bak = cwd_string;
+			string arguments = input.substr(6);
+			bool flag = true;
+			string internal = "";
+			string external = "";
+			for (int i = 0; i < arguments.length(); i++) {
+				if (arguments[i] == ' ') {
+					flag = false;
+					continue;
+				}
+				if (flag) internal += arguments[i];
+				else external += arguments[i];
+			}
+			cout << internal << endl << external << endl;
+			cpout(internal, external);
+			cwd = cwd_bak;
+			cwd_string = cwd_string_bak;
 		}
 		disk.seekg(cwd, disk.beg);
 		cout << ": " << cwd_string << " > ";

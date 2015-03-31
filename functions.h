@@ -109,7 +109,6 @@ void cd(string target) {
 				cwd = root;
 			}
 			else {
-				cout << jump_target << endl << cwd << endl;
 				cwd = (jump_target + (((RootEntCnt * 32)/BytesPerSec)/SecPerClus) - 2) * SecPerClus * BytesPerSec + root;
 				break;
 			}
@@ -196,21 +195,22 @@ void cpout(string internal, string external) {
 			disk.seekg(14, disk.cur);
 			uint16_t file_loc;
 			uint64_t file_size;
-			cout << endl << file_loc << endl << file_size << endl;
 			uint8_t byte;
-			disk.read((char*)&file_loc, 2);
-			disk.read((char*)&file_size, 4);
-			//ext_file.open(external.c_str());
+			ext_file.open(external.c_str(), fstream::out);
 			do {
-				seek_fat_index(file_loc);
 				disk.read((char*)&file_loc, 2);
-				cwd = (file_loc + 2) * SecPerClus * BytesPerSec + root;
+				disk.read((char*)&file_size, 4);
+				cwd = (file_loc + (((RootEntCnt * 32)/BytesPerSec/SecPerClus) - 2)) * SecPerClus * BytesPerSec + root;
+				disk.seekg(cwd, disk.beg);
 				for (int i = 0; i < BytesPerSec * SecPerClus && file_size > 0; i++) {
 					disk.read((char*)&byte, 1);
-					cout << hex << (int)byte << endl;
+					cout << byte;
+					ext_file.write((char*)&byte, 1);
 					file_size--;
 				}
+				seek_fat_index(file_loc);
 			} while ((int)file_loc != 65535); // xFFFF = 65535
+			ext_file.close();
 		}
 		disk.seekg(20, disk.cur);
 		disk.read((char*)file_name, 8);
