@@ -49,6 +49,9 @@ int main( int argc, char *argv[] ) {
 		else if (input.substr(0,2) == "cd") { // Need to break the target down into bite sized chunks for cd
 			seek(input.substr(3));
 		}
+		else if (input == "test") {
+			cpout("/PEOPLE/YYZ5W/THE-GAME.TXT", "");
+		}
 		disk.seekg(cwd, disk.beg);
 		cout << ": " << cwd_string << " > ";
 		getline(cin, input);

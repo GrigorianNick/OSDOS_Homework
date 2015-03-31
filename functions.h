@@ -109,7 +109,8 @@ void cd(string target) {
 				cwd = root;
 			}
 			else {
-				cwd = (jump_target + 2) * SecPerClus * BytesPerSec + root;
+				cout << jump_target << endl << cwd << endl;
+				cwd = (jump_target + (((RootEntCnt * 32)/BytesPerSec)/SecPerClus) - 2) * SecPerClus * BytesPerSec + root;
 				break;
 			}
 		}
@@ -117,6 +118,16 @@ void cd(string target) {
 			disk.seekg(20, disk.cur);
 		}
 	} while((int)file_name[0] != 0);
+}
+
+void seek_fat() { // Only looking for first FAT. Deal with redundancy later.
+	cwd = SecPerClus * BytesPerSec;
+}
+
+void seek_fat_index(int16_t index) {
+	seek_fat();
+	disk.seekg(cwd, disk.beg);
+	disk.seekg(index * 2, disk.cur);
 }
 
 void seek(string target) {
@@ -139,3 +150,72 @@ void seek(string target) {
 	}
 	if (sub_target != "") cd(sub_target);
 }
+
+void cpout(string internal, string external) {
+	int cwd_bak = cwd;
+	string cwd_string_bak = cwd_string;
+	fstream ext_file;
+	seek(internal);
+	// Now at parent directory, time to build file name
+	string target;
+	for (int i = 0; i < internal.length(); i++) {
+		if (internal[i] != '/') {
+			target += internal[i];
+		}
+		else {
+			target = "";
+		}
+	}
+	// Now we find the target's DIR entry
+	disk.seekg(cwd, disk.beg);
+	uint8_t file_name[8];
+	uint8_t file_ext[3];
+	uint8_t DIR_Attr;
+	disk.read((char*)file_name, 8);
+	disk.read((char*)file_ext, 3);
+	disk.read((char*)&DIR_Attr, 1);
+	do {
+		bool found_target = true;
+		//if ((int)DIR_Attr & 16 == 16) continue; // can't copy a directory out
+		for (int i = 0; i < 8; i++) {
+			if ((int)file_name[i] == 32) break;
+			if ((int)file_name[i] != (int)target[i]) {
+				found_target = false;
+				break;
+			}
+		}
+		if (found_target) { // Found the file name, now time to check the extension
+			for (int i = 0; i < 3; i++) {
+				if ((int)file_ext[i] != (int)(target[target.length() - 3 + i])) {
+					found_target = false;
+					break;
+				}
+			}
+		}
+		if (found_target) { // Found the file!
+			disk.seekg(14, disk.cur);
+			uint16_t file_loc;
+			uint64_t file_size;
+			cout << endl << file_loc << endl << file_size << endl;
+			uint8_t byte;
+			disk.read((char*)&file_loc, 2);
+			disk.read((char*)&file_size, 4);
+			//ext_file.open(external.c_str());
+			do {
+				seek_fat_index(file_loc);
+				disk.read((char*)&file_loc, 2);
+				cwd = (file_loc + 2) * SecPerClus * BytesPerSec + root;
+				for (int i = 0; i < BytesPerSec * SecPerClus && file_size > 0; i++) {
+					disk.read((char*)&byte, 1);
+					cout << hex << (int)byte << endl;
+					file_size--;
+				}
+			} while ((int)file_loc != 65535); // xFFFF = 65535
+		}
+		disk.seekg(20, disk.cur);
+		disk.read((char*)file_name, 8);
+		disk.read((char*)file_ext, 3);
+		disk.read((char*)&DIR_Attr, 1);
+	} while ((int)file_name[0] != 0);
+}
+
