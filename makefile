@@ -4,4 +4,4 @@ all:
 clean:
 	rm -f ./fat
 	rm -f *.o
-	cp ../sampledisk* ./
+	cp ../*.raw ./

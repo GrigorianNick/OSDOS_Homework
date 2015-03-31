@@ -14,6 +14,7 @@ void ls() {
 	uint8_t file_name[8];
 	uint8_t file_ext[3];
 	uint8_t DIR_Attr;
+	int num_dir_entries = (BytesPerSec * SecPerClus) / 32;
 	disk.read((char*)file_name, 8);
 	disk.read((char*)file_ext, 3);
 	disk.read((char*)&DIR_Attr, 1);
@@ -61,7 +62,8 @@ void ls() {
 		disk.read((char*)file_name, 8);
 		disk.read((char*)file_ext, 3);
 		disk.read((char*)&DIR_Attr, 1);
-	} while ((int)file_name[0] != 0);
+		num_dir_entries--;
+	} while ((int)file_name[0] != 0 && num_dir_entries > 0);
 }
 
 void cd(string target) {
@@ -148,6 +150,78 @@ void seek(string target) {
 		}
 	}
 	if (sub_target != "") cd(sub_target);
+}
+
+void cpin(string external, string internal) {
+	int cwd_bak = cwd;
+	string cwd_string_bak = cwd_string;
+	fstream ext_file;
+	seek(internal);
+	// Now at parent directory, time to build file name
+	string target = "";
+	for (int i = 0; i < internal.length(); i++) {
+		if (internal[i] != '/') {
+			target += internal[i];
+		}
+		else {
+			target = "";
+		}
+	}
+	// Now break the target down into file_name and file_ext
+	string file_name = "";
+	string file_ext = "";
+	for (int i = 0; i < 8; i++) {
+		if (target[i] == '.') break;
+		file_name += target[i];
+	}
+	for (int i = 0; i < 3; i++) {
+		file_ext += target[target.length() - 3 + i]; // We're just going to pretend everybody has a three letter extension
+	}
+	// Find next opening in directory
+	uint8_t byte;
+	byte = disk.peek();
+	while((int)byte != 0) {
+		disk.seekg(32, disk.cur);
+		byte = disk.peek();
+	}
+	int dir_entry = disk.tellg(); // Store where our data entry is
+	// Format data struct with 0x20
+	uint8_t format[11] = {32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32};
+	disk.write((char*)format, 11);
+	// Write file name
+	disk.seekg(dir_entry, disk.beg);
+	disk << file_name; // Write file name
+	disk.seekg(dir_entry + 8, disk.beg);
+	disk << file_ext; // Write file extension
+	disk << 32; // We are an archive
+	// Seek for first open cluster
+	seek_fat();
+	disk.seekg(cwd, disk.beg);
+	byte = disk.peek();
+	uint16_t clus_num = 0;
+	while (byte != 0 && byte) { // Found an open cluster!
+		clus_num++;
+		disk.seekg(2, disk.cur);
+		byte = disk.peek();
+	}
+	disk << 65535; // We only handle single-cluster files
+	// Record which cluster we're starting in
+	disk.seekg(dir_entry + 26, disk.beg);
+	disk.write((char*)&clus_num, 2);
+	// Move to cluster start
+	cwd = (clus_num + (((RootEntCnt * 32)/BytesPerSec)/SecPerClus)-2) * SecPerClus * BytesPerSec + root;
+	// Copy file over
+	disk.seekg(cwd, disk.beg);
+	ext_file.open(external.c_str());
+	uint64_t file_size = 0;
+	while (ext_file.read((char*)&byte,1)) {
+		disk << byte;
+		file_size++;
+	}
+	ext_file.close();
+	// Record file size in dir entry
+	disk.seekg(dir_entry + 28, disk.beg);
+	disk << file_size;
 }
 
 void cpout(string internal, string external) {
