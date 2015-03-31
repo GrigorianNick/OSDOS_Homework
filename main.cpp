@@ -64,7 +64,6 @@ int main( int argc, char *argv[] ) {
 				if (flag) internal += arguments[i];
 				else external += arguments[i];
 			}
-			cout << internal << endl << external << endl;
 			cpout(internal, external);
 			cwd = cwd_bak;
 			cwd_string = cwd_string_bak;

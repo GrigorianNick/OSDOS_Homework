@@ -197,18 +197,18 @@ void cpout(string internal, string external) {
 			uint64_t file_size;
 			uint8_t byte;
 			ext_file.open(external.c_str(), fstream::out);
+			disk.read((char*)&file_loc, 2);
+			disk.read((char*)&file_size, 4);
 			do {
-				disk.read((char*)&file_loc, 2);
-				disk.read((char*)&file_size, 4);
 				cwd = (file_loc + (((RootEntCnt * 32)/BytesPerSec/SecPerClus) - 2)) * SecPerClus * BytesPerSec + root;
 				disk.seekg(cwd, disk.beg);
 				for (int i = 0; i < BytesPerSec * SecPerClus && file_size > 0; i++) {
 					disk.read((char*)&byte, 1);
-					cout << byte;
 					ext_file.write((char*)&byte, 1);
 					file_size--;
 				}
 				seek_fat_index(file_loc);
+				disk.read((char*)&file_loc, 2);
 			} while ((int)file_loc != 65535); // xFFFF = 65535
 			ext_file.close();
 		}
