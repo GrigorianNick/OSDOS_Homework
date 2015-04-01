@@ -1,3 +1,12 @@
+/* ngg3vm
+
+This file contains all the system info and the helper functions to read the sysinfo.
+
+Changelog:
+	- March 25: Created
+
+*/
+
 #include <iostream>
 
 using namespace std;

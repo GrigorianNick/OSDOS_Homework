@@ -1,3 +1,25 @@
+/* ngg3vm
+
+This is the file that contains all the functions specified in the assignment, as well as their helper functions. The impelementation SHOULD be in its own .cpp file, but I didn't get around to properly organizing the project.
+
+- print_DIR_entry():				Prints a given directory entry. Assumes disk head is at the start of a directory entry.
+- seek_fat():					Moves cwd to start of FAT
+- seek_fat_index(int16_t index):		Moves disk head to FAT entry specified by index
+- ls():						Prints current directory, works with multi-clustered directory files
+- cd(string target):				Moves cwd to directory specified by target. Does not work with multi-clustered directory files.
+- seek(string target):				Traverses FS to directory specified by target. Handles both relative and absolute pathing.
+- cpin(stirng internal, string external):	Skeleton code for copying file out of FS. Does not work.
+- cpout(string internal, string external):	Copies a file out of the FS into the "real" FS. Works with multi-clustered files, but not multi-clustered directories.
+
+A full timeline of changes can be found at https://github.com/GrigorianNick/OSDOS_Homework/commits/master/functions.h
+
+- March 25: Created functions.h with cd and ls
+- March 28: Added proper targetting for cd and absolute/relative pathing to ls
+- March 29: Created seek functionality
+- March 30: Fixed some magic numbers
+- March 31: Added cpout, seek_fat, and seek_fat_index
+
+*/
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -57,7 +79,7 @@ void seek_fat() { // Only looking for first FAT. Deal with redundancy later.
 	cwd = RsvdSecCnt * BytesPerSec;
 }
 
-void seek_fat_index(int16_t index) {
+void seek_fat_index(int16_t index) { // Move to FAT[index]. DOES NOT CHANGE CWD!
 	seek_fat();
 	disk.seekg(cwd, disk.beg);
 	disk.seekg(index * 2, disk.cur);
@@ -152,8 +174,8 @@ void cd(string target) {
 	} while((int)file_name[0] != 0);
 }
 
-void seek(string target) {
-	if (target[0] == '/') {
+void seek(string target) { // Break <dst> into bite-sized pieces for cd
+	if (target[0] == '/') { // Absolute pathing, reset to root DIR
 		cwd_string = "/";
 		cwd = root;
 		disk.seekg(cwd, disk.beg);
@@ -170,11 +192,10 @@ void seek(string target) {
 			sub_target = "";
 		}
 	}
-	if (sub_target != "") cd(sub_target);
+	if (sub_target != "") cd(sub_target); // Needed since there isn't a closing slash to trigger the cd
 }
 
-void cpin(string internal, string external) {
-	cout << "hai" << endl;
+void cpin(string internal, string external) { // Does not work
 	int cwd_bak = cwd;
 	string cwd_string_bak = cwd_string;
 	fstream ext_file;
@@ -190,7 +211,7 @@ void cpin(string internal, string external) {
 		seek_fat_index(next_clus);
 	} while((int)next_clus != 65535);
 	cwd = (curr_clus + (((RootEntCnt * 31)/BytesPerSec)/SecPerClus) - 2) * SecPerClus * BytesPerSec + root; // Jump to the last cluster in the directory
-	disk.read(cwd, disk.beg);
+	disk.seekg(cwd, disk.beg);
 	//Scan until we find an empty entry
 	bool full = false;
 	while ((int)disk.peek() != 0) {
@@ -286,6 +307,8 @@ void cpout(string internal, string external) {
 	disk.read((char*)file_name, 8);
 	disk.read((char*)file_ext, 3);
 	disk.read((char*)&DIR_Attr, 1);
+	int num_dir_entries = (BytesPerSec * SecPerClus) / 32;
+	// Loop through the DIR looking for our target 
 	do {
 		bool found_target = true;
 		//if ((int)DIR_Attr & 16 == 16) continue; // can't copy a directory out
@@ -312,6 +335,7 @@ void cpout(string internal, string external) {
 			ext_file.open(external.c_str(), fstream::out);
 			disk.read((char*)&file_loc, 2);
 			disk.read((char*)&file_size, 4);
+			// Loop through file, pull out and write its data into <dst> one byte at a time
 			do {
 				cwd = (file_loc + (((RootEntCnt * 32)/BytesPerSec/SecPerClus) - 2)) * SecPerClus * BytesPerSec + root;
 				disk.seekg(cwd, disk.beg);
@@ -329,6 +353,7 @@ void cpout(string internal, string external) {
 		disk.read((char*)file_name, 8);
 		disk.read((char*)file_ext, 3);
 		disk.read((char*)&DIR_Attr, 1);
-	} while ((int)file_name[0] != 0);
+		num_dir_entires--;
+	} while ((int)file_name[0] != 0 && num_dir_entries > 0);
 }
 

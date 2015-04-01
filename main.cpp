@@ -1,3 +1,30 @@
+/* ngg3vm
+
+This is the shell portion of the program. It prints the prompt, does basic user input parsing, and makes calls on the user's behalf.
+
+All code can be viewed at https://github.com/GrigorianNick/OSDOS_Homework
+
+compile: make
+
+Complete changelog can be found here: https://github.com/GrigorianNick/OSDOS_Homework/commits/master/main.cpp
+
+User actions:
+	- cd:			Takes user to root
+	- cd <dst>:		Moves user into <dst> subdirectory. Only works with monocluster directory files.
+	- ls:			Lists contents of directory. Works with multi-cluster directory files.
+	- ls <dst>:		Lists contents of <dst> ditrectory. If cd can reach <dst>, then it works with multi-cluster directory files.
+	- cpout <src> <dst>:	Copies <src> out of the FS and into <dst> on the filesystem. If cd can reach <src>, then it works with multi-cluster directory files
+	- cpin <src> <dst>:	Does not work.
+
+Change-log:
+	- March 22: Created main.cpp, read the BPB cluster
+	- March 23: Added ls
+	- March 24: Formatted the prompt, added cd
+	- March 25: Bugfixing cd then pulled FS functions into functions.h and system info into sysinfo.h
+	- March 28: Added cwd to prompt
+
+*/
+
 #include <iomanip>
 #include <iostream>
 #include <fstream>
@@ -16,9 +43,7 @@ int main( int argc, char *argv[] ) {
 	}
 	disk.open(argv[1]);
 	loadFATInfo();
-	printDiagnosticInfo();
-	//disk.seekg(FSInfo * BytesPerSec, disk.beg); // FSInfo sector
-	//disk.seekg((FSInfo * BytesPerSec) + 484, disk.beg); // FSInfo secondary sig
+	//printDiagnosticInfo(); // Prints sysinfo stuff.
 	root = (RsvdSecCnt + FATSz16 * NumFATs) * BytesPerSec; // root directory
 	cwd_string = "/";
 	cwd = root;
@@ -68,7 +93,7 @@ int main( int argc, char *argv[] ) {
 			cwd = cwd_bak;
 			cwd_string = cwd_string_bak;
 		}
-		else if (input.substr(0,4) == "cpin") {
+		else if (input.substr(0,4) == "cpin") { // Doesn't work
 			int cwd_bak = cwd;
 			string cwd_string_bak = cwd_string;
 			string arguments = input.substr(5);
