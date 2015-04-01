@@ -68,6 +68,25 @@ int main( int argc, char *argv[] ) {
 			cwd = cwd_bak;
 			cwd_string = cwd_string_bak;
 		}
+		else if (input.substr(0,4) == "cpin") {
+			int cwd_bak = cwd;
+			string cwd_string_bak = cwd_string;
+			string arguments = input.substr(5);
+			bool flag = false;
+			string internal = "";
+			string external = "";
+			for (int i = 0; i < arguments.length(); i++) {
+				if (arguments[i] == ' ') {
+					flag = !flag;
+					continue;
+				}
+				if (flag) internal += arguments[i];
+				else external += arguments[i];
+			}
+			cpin(internal, external);
+			cwd = cwd_bak;
+			cwd_string = cwd_string_bak;
+		}
 		disk.seekg(cwd, disk.beg);
 		cout << ": " << cwd_string << " > ";
 		getline(cin, input);

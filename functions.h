@@ -9,61 +9,92 @@
 
 using namespace std;
 
-
-void ls() {
+void print_DIR_entry() {
 	uint8_t file_name[8];
 	uint8_t file_ext[3];
 	uint8_t DIR_Attr;
-	int num_dir_entries = (BytesPerSec * SecPerClus) / 32;
 	disk.read((char*)file_name, 8);
 	disk.read((char*)file_ext, 3);
 	disk.read((char*)&DIR_Attr, 1);
-	do {
-		if (((int)DIR_Attr & 2) == 2) { // Hidden folder, skip
-			disk.seekg(20, disk.cur);
-			disk.read((char*)file_name, 8);
-			disk.read((char*)file_ext, 3);
-			disk.read((char*)&DIR_Attr, 1);
-			continue;
+	if (((int)DIR_Attr & 2) == 2) { // Hidden folder, skip
+		return;
+	}
+	if (((int)DIR_Attr & 16) == 16) { // Directory, D w/ 2 spaces
+		cout << "D  ";
+	}
+	else if (((int)DIR_Attr & 8) == 8) { // Volume ID, Volume Label: w/ 1 space
+		cout << "Volume Label: ";
+	}
+	else { // File, 3 spaces
+		cout << "   ";
+	}
+	for (int i = 0; i < 8; i++) {
+		if ((int)file_name[i] != 32) {
+			cout << file_name[i];
 		}
-		if (((int)DIR_Attr & 16) == 16) { // Directory, D w/ 2 spaces
-			cout << "D  ";
+		else {
+			break;
 		}
-		else if (((int)DIR_Attr & 8) == 8) { // Volume ID, Volume Label: w/ 1 space
-			cout << "Volume Label: ";
-		}
-		else { // File, 3 spaces
-			cout << "   ";
-		}
-		for (int i = 0; i < 8; i++) {
-			if ((int)file_name[i] != 32) {
-				cout << file_name[i];
+	}
+	if (((int)DIR_Attr & 16) != 16 && (int)file_ext[0] != 32) { // This entry isn't a directory and it has an ext
+		if ((int)file_ext[0] != 32) cout << ".";
+		for (int i = 0; i < 3; i++) {
+			if ((int)file_ext[i] != 32) {
+				cout << file_ext[i];
 			}
 			else {
 				break;
 			}
 		}
-		if (((int)DIR_Attr & 16) != 16 && (int)file_ext[0] != 32) { // This entry isn't a directory and it has an ext
-			if ((int)file_ext[0] != 32) cout << ".";
-			for (int i = 0; i < 3; i++) {
-				if ((int)file_ext[i] != 32) {
-					cout << file_ext[i];
-				}
-				else {
-					break;
-				}
-			}
+	}
+	else if (((int)DIR_Attr & 16) == 16 && (int)file_ext[0] != 32) { // We're a directory that took all 11 bytes
+		cout << file_ext;
+	}
+	cout << endl; // Carriage return!
+}
+
+void seek_fat() { // Only looking for first FAT. Deal with redundancy later.
+	cwd = RsvdSecCnt * BytesPerSec;
+}
+
+void seek_fat_index(int16_t index) {
+	seek_fat();
+	disk.seekg(cwd, disk.beg);
+	disk.seekg(index * 2, disk.cur);
+}
+
+void ls() {
+	int num_dir_entries = (BytesPerSec * SecPerClus) / 32;
+	if (cwd == root) { // Root can't be multi-clustered
+		do {
+			print_DIR_entry();
+			disk.seekg(20, disk.cur);
+			num_dir_entries--;
+		} while ((int)disk.peek() != 0 && num_dir_entries > 0);
+	}
+	else { // We're looking at a different folder
+		print_DIR_entry(); // This gets us to byte 12 of entry "."
+		disk.seekg(14, disk.cur); // This gets us to the first cluster entry
+		uint16_t next_clus;
+		disk.read((char*)&next_clus, 2); // FAT entry we need to look at
+		disk.seekg(4, disk.cur); // Bring us up to the next entry
+		num_dir_entries--; // We already read an entry
+		int cwd_bak = cwd; // Back up where we are
+		do {
+			disk.seekg(cwd, disk.beg); // Redundant for the first iteration
+			do { // Print the directory like normal
+				print_DIR_entry();
+				disk.seekg(20, disk.cur);
+				num_dir_entries--;
+			} while((int)disk.peek() != 0 && num_dir_entries > 0);
+			num_dir_entries = (BytesPerSec * SecPerClus) / 32; // Reset number of allowed entries
+			seek_fat_index(next_clus); // Jump to FAT entry for this directory
+			disk.read((char*)&next_clus, 2); // Read next dir we need to go to
+			cwd = (next_clus + (((RootEntCnt * 31)/BytesPerSec)/SecPerClus) - 2) * SecPerClus * BytesPerSec + root; // Calculate our jump cluster 
 		}
-		else if (((int)DIR_Attr & 16) == 16 && (int)file_ext[0] != 32) { // We're a directory that took all 11 bytes
-			cout << file_ext;
-		}
-		cout << endl; // Carriage return!
-		disk.seekg(20, disk.cur);
-		disk.read((char*)file_name, 8);
-		disk.read((char*)file_ext, 3);
-		disk.read((char*)&DIR_Attr, 1);
-		num_dir_entries--;
-	} while ((int)file_name[0] != 0 && num_dir_entries > 0);
+		while((int)next_clus != 65535); //65535 = xFFFF
+		cwd = cwd_bak; // Restore us to the original diretory
+	}
 }
 
 void cd(string target) {
@@ -121,16 +152,6 @@ void cd(string target) {
 	} while((int)file_name[0] != 0);
 }
 
-void seek_fat() { // Only looking for first FAT. Deal with redundancy later.
-	cwd = SecPerClus * BytesPerSec;
-}
-
-void seek_fat_index(int16_t index) {
-	seek_fat();
-	disk.seekg(cwd, disk.beg);
-	disk.seekg(index * 2, disk.cur);
-}
-
 void seek(string target) {
 	if (target[0] == '/') {
 		cwd_string = "/";
@@ -152,12 +173,30 @@ void seek(string target) {
 	if (sub_target != "") cd(sub_target);
 }
 
-void cpin(string external, string internal) {
+void cpin(string internal, string external) {
+	cout << "hai" << endl;
 	int cwd_bak = cwd;
 	string cwd_string_bak = cwd_string;
 	fstream ext_file;
 	seek(internal);
-	// Now at parent directory, time to build file name
+	disk.seekg(cwd, disk.beg);
+	disk.seekg(26, disk.cur);
+	uint16_t next_clus, curr_clus;
+	disk.read((char*)&next_clus, 2);
+	seek_fat_index(next_clus);
+	do {
+		curr_clus = next_clus;
+		disk.read((char*)&next_clus, 2);
+		seek_fat_index(next_clus);
+	} while((int)next_clus != 65535);
+	cwd = (curr_clus + (((RootEntCnt * 31)/BytesPerSec)/SecPerClus) - 2) * SecPerClus * BytesPerSec + root; // Jump to the last cluster in the directory
+	disk.read(cwd, disk.beg);
+	//Scan until we find an empty entry
+	bool full = false;
+	while ((int)disk.peek() != 0) {
+		disk.seekg(32, disk.cur);
+	}
+	// Now at empty entry // Stopped here
 	string target = "";
 	for (int i = 0; i < internal.length(); i++) {
 		if (internal[i] != '/') {
