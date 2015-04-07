@@ -353,7 +353,7 @@ void cpout(string internal, string external) {
 		disk.read((char*)file_name, 8);
 		disk.read((char*)file_ext, 3);
 		disk.read((char*)&DIR_Attr, 1);
-		num_dir_entires--;
+		num_dir_entrries--;
 	} while ((int)file_name[0] != 0 && num_dir_entries > 0);
 }
 
